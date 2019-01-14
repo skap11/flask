@@ -18,20 +18,15 @@ api = Api(app) # To allow us to add resources to app. Api works with resources a
 
 class Item(Resource):
     def get(self, name):
-        for item in items:
-            if item['name'] == name:
-                return item
-        return {'errorMessage': 'Resource with name {} was not found.'.format(name)}, 404 # 404 stands for data not found.
+        item = next(filter(lambda x: x['name'] == name, items), None)
+        return {'item': item}, 200 if item else 404 # 404 stands for data not found.
     
     def post(self, name):
-        for item in items:
-            if item['name'] == name:
-                return {'errorMessage': 'Resource with name {} already exists.'.format(name)}, 400 # Bad request
+        if next(filter(lambda x: x['name'] == name, items), None):
+            return {'errorMessage': 'Resource with name {} already exists.'.format(name)}, 400 # Bad request
         item = {'name': name, 'price': 12}
         items.append(item)
         return item, 201 # 201 stands for created.
-
-
 
     # Put request are called idempotent request,
     # which means even though the thing which we are going to do might already be done, 
