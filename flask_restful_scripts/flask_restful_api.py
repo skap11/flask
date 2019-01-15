@@ -1,5 +1,7 @@
 from flask import Flask, jsonify
 from flask_restful import Resource, Api
+from flask_jwt import JWT, jwt_required
+from security import authenticate, identity
 
 # Resource is a thing which our api is concerned of.
 # For example if we want to create and return student, then student is a resource and our student endpoints will be
@@ -13,16 +15,23 @@ items= [
 ]
 
 app = Flask(__name__) 
-
+app.secret_key = 'shivam' 
 api = Api(app) # To allow us to add resources to app. Api works with resources and every resource has to be a class.
 
+jwt = JWT(app, authenticate, identity) # exposes /auth api. 
+
 class Item(Resource):
-    def get(self, name):
-        item = next(filter(lambda x: x['name'] == name, items), None)
-        return {'item': item}, 200 if item else 404 # 404 stands for data not found.
     
+    @jwt_required()
+    def get(self, name):
+        item = filter(lambda x: x['name'] == name, items) # filter returns a list in python 2.7
+        if len(item) > 0:
+            return {'item': item[0]}, 200 
+        return {'item': None}, 404 # 404 stands for data not found.
+    
+    @jwt_required() # with python 2.7 it throws exception if the token is not there, with python3.6 it handles and throws custom exception. 
     def post(self, name):
-        if next(filter(lambda x: x['name'] == name, items), None):
+        if len(filter(lambda x: x['name'] == name, items)) > 0:
             return {'errorMessage': 'Resource with name {} already exists.'.format(name)}, 400 # Bad request
         item = {'name': name, 'price': 12}
         items.append(item)
