@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_restful import Resource, Api
 from flask_jwt import JWT, jwt_required
 from security import authenticate, identity
@@ -40,11 +40,23 @@ class Item(Resource):
     # Put request are called idempotent request,
     # which means even though the thing which we are going to do might already be done, 
     # but it will still execute without failing.  
+    @jwt_required()
     def put(self, name):
-        pass
-
+        data = request.get_json()
+        itemList = filter(lambda x: x['name'] == name, items)
+        if len(itemList) == 0:
+            item = {'name': name, 'price': data['price']}
+            items.append(item)
+        else:
+            item = itemList[0]
+            item.update(data)
+        return item
+    
+    @jwt_required()
     def delete(self, name):
-        pass
+        global items
+        items = filter(lambda x: x['name'] != name, items)
+        return {'message': 'item deleted'}
 
 class Items(Resource):
     def get(self):
