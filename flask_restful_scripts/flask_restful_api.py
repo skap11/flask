@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from flask_restful import Resource, Api
+from flask_restful import Resource, Api, reqparse
 from flask_jwt import JWT, jwt_required
 from security import authenticate, identity
 
@@ -21,8 +21,12 @@ api = Api(app) # To allow us to add resources to app. Api works with resources a
 jwt = JWT(app, authenticate, identity) # exposes /auth api. 
 
 class Item(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument('price', 
+        type=float,
+        required=True,
+        help='This field cannot be left blank')
     
-    @jwt_required()
     def get(self, name):
         item = filter(lambda x: x['name'] == name, items) # filter returns a list in python 2.7
         if len(item) > 0:
@@ -33,7 +37,9 @@ class Item(Resource):
     def post(self, name):
         if len(filter(lambda x: x['name'] == name, items)) > 0:
             return {'errorMessage': 'Resource with name {} already exists.'.format(name)}, 400 # Bad request
-        item = {'name': name, 'price': 12}
+        
+        data = Item.parser.parse_args()
+        item = {'name': name, 'price': data['price']}
         items.append(item)
         return item, 201 # 201 stands for created.
 
@@ -42,7 +48,7 @@ class Item(Resource):
     # but it will still execute without failing.  
     @jwt_required()
     def put(self, name):
-        data = request.get_json()
+        data = Item.parser.parse_args()
         itemList = filter(lambda x: x['name'] == name, items)
         if len(itemList) == 0:
             item = {'name': name, 'price': data['price']}
